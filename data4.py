@@ -14,8 +14,10 @@ from sklearn.base import clone
 from itertools import combinations
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
-from sympy import subsets
+from sympy import rotations, subsets
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+
 # サンプルデータを作成
 csv_data = '''A,B,C,D
               1.0,2.0,3.0,4.0
@@ -306,5 +308,45 @@ plt.ylim([0.7, 1.02])
 plt.ylabel('Accuracy')
 plt.xlabel('Number of features')
 plt.grid()
+plt.tight_layout()
+plt.show()
+
+k3 = list(sbs.subsets_[10])
+print(df_wine.columns[1:][k3])
+
+# 13個すべての特徴量を用いてモデルを適合
+knn.fit(X_train_std, y_train)
+# 訓練の正解率を出力
+print('Training accuracy:', knn.score(X_train_std, y_train))
+
+# テストの正解率を出力
+print('Test accuracy:', knn.score(X_test_std, y_test))
+
+# 3つの特徴量を用いてモデルを適合
+knn.fit(X_train_std[:, k3], y_train)
+# 訓練の正解率を出力
+print('Training accuracy:', knn.score(X_train_std[:, k3], y_train))
+# テストの正解率を出力
+print('Test accuracy:', knn.score(X_test_std[:, k3], y_test))
+
+# wineデータセットの特徴量の名称
+feat_labels = df_wine.columns[1:]
+# ランダムフォレストオブジェクトの生成（決定木の個数:500）
+forest = RandomForestClassifier(n_estimators=500, random_state=1)
+# モデルを適合
+forest.fit(X_train, y_train)
+# 特徴量の重要度を抽出
+importances = forest.feature_importances_
+# 重要度の降順で特徴量のインデックスを抽出
+indices = np.argsort(importances)[::-1]
+# 重要度の降順で特徴量の名称、重要度を表示
+for f in range(X_train.shape[1]):
+    print("(%2d) %-*s %f" %
+          (f+1, 30, feat_labels[indices[f]], importances[indices[f]]))
+
+plt.title('Feature Importances')
+plt.bar(range(X_train.shape[1]), importances[indices], align='center')
+plt.xticks(range(X_train.shape[1]), feat_labels[indices], rotation=90)
+plt.xlim([-1, X_train.shape[1]])
 plt.tight_layout()
 plt.show()
