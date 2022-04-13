@@ -17,7 +17,7 @@ from sklearn.model_selection import train_test_split
 from sympy import rotations, subsets
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
-
+from sklearn.feature_selection import SelectFromModel
 # サンプルデータを作成
 csv_data = '''A,B,C,D
               1.0,2.0,3.0,4.0
@@ -350,3 +350,15 @@ plt.xticks(range(X_train.shape[1]), feat_labels[indices], rotation=90)
 plt.xlim([-1, X_train.shape[1]])
 plt.tight_layout()
 plt.show()
+
+# 特徴量選択オブジェクトの生成（重要度のしきい値0.1に設定）
+sfm = SelectFromModel(forest, threshold=0.1, prefit=True)
+# 特徴量を抽出
+X_selected = sfm.transform(X_train)
+print('Number of features that meet this threshold critersion:',
+      X_selected.shape[1])
+
+for f in range(X_selected.shape[1]):
+    print("%2d) %-*s %f" % (f + 1, 30,
+                            feat_labels[indices[f]],
+                            importances[indices[f]]))
