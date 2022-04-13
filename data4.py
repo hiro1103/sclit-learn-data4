@@ -1,10 +1,15 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from io import StringIO
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
 
 # サンプルデータを作成
 csv_data = '''A,B,C,D
@@ -133,3 +138,79 @@ print('Class labels', np.unique(df_wine['Class label']))
 
 # wineデータセットの先頭5行を表示
 print(df_wine.head())
+
+# 特徴量とクラスラベルを別々に抽出
+X, y = df_wine.iloc[:, 1:].values, df_wine.iloc[:, 0].values
+# 訓練データとテストデータに分割(30%をテストデータにする)
+X_train, X_test, y_train, y_test = \
+    train_test_split(X, y, test_size=0.3, random_state=0, stratify=y)
+
+# min-maxスケーリングのインスタンスを生成
+mms = MinMaxScaler()
+# 訓練データをスケーリング
+X_train_norm = mms.fit_transform(X_train)
+# テストデータをスケーリング
+X_test_norm = mms.transform(X_test)
+
+ex = np.array([0, 1, 2, 3, 4, 5])
+print('standardized:', (ex-ex.mean())/ex.std())
+print('normalized:', (ex-ex.min())/(ex.max()-ex.min()))
+# 標準化のインスタンスを生成(平均0,標準偏差1に変換)
+stdsc = StandardScaler()
+X_train_std = stdsc.fit_transform(X_train)
+X_test_std = stdsc.transform(X_test)
+
+LogisticRegression(penalty='l1', solver='liblinear', multi_class='ovr')
+# L1正規化ロジスティク回帰のインスタンスを生成：逆正則化パラメータC=1.0はデフォルト値であり、
+# 値を大きくしたり小さくしたりすると、正則化の効果を強めたり弱めたりできる。
+lr = LogisticRegression(penalty='l1', C=1.0,
+                        solver='liblinear', multi_class='ovr')
+# 訓練データに適合
+lr.fit(X_train_std, y_train)
+# 訓練データに対する正解率を算出
+print('Training accuracy:', lr.score(X_train_std, y_train))
+# テストデータに対する正解率を算出
+print('Test accuracy:', lr.score(X_test_std, y_test))
+
+print(lr.intercept_)
+# 重みの係数を表示
+print(lr.coef_)
+
+# 描画の準備
+fig = plt.figure()
+ax = plt.subplot(1, 1, 1)
+# 各係数の色のリスト
+colors = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow', 'black',
+          'pink', 'lightgreen', 'lightblue', 'gray', 'indigo', 'orange']
+# 空のリストを生成（重み係数、逆正則化パラメータ）
+weights, params = [], []
+# 逆正則化パラメータの値ごとに処理
+for c in np.arange(-4.0, 6.0):
+    lr = LogisticRegression(penalty='l1', C=10.**c, solver='liblinear',
+                            multi_class='ovr', random_state=0)
+
+    lr.fit(X_train_std, y_train)
+    weights.append(lr.coef_[1])
+    params.append(10**c)
+
+# 重み係数をNumpy配列に変換
+weights = np.array(weights)
+# 各重み係数をプロット
+for column, color in zip(range(weights.shape[1]), colors):
+    # 横軸を逆正則化パラメータ、縦軸を重み係数とした折れ線グラフ
+    plt.plot(params, weights[:, column], label=df_wine.columns[column+1],
+             color=color)
+
+# y=0に黒い波線を引く
+plt.axhline(0, color='black', linestyle='--', linewidth=3)
+# 横軸の範囲の設定
+plt.xlim([10**(-5), 10**5])
+# 軸のラベルの設定
+plt.ylabel('weight coefficient')
+plt.xlabel('C')
+# 横軸を対数スケールに設定
+plt.xscale('log')
+plt.legend(loc='upper left')
+ax.legend(loc='upper center', bbox_to_anchor=(
+    1.38, 1.03), ncol=1, fancybox=True)
+plt.show()
